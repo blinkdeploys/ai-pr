@@ -24,7 +24,18 @@ def build_prompt(repo_full, pr_number, branch_path, report):
 
 # run open ai prompt
 def call_openai(prompt: str) -> str:
-    pass
+    if AI_PROVIDER == "openai":
+        import openai
+        openai.api_key = OPENAI_KEY
+        resp = openai.ChatCompletion.create(model="gpt-4o-mini", 
+                                            messages=[{"role":"user","content":prompt}],
+                                            max_tokens=600,
+                                            temperature=0.0
+                                            )
+        return resp["choices"][0]["message"]["content"]
+    else:
+        # Fallback simple heuristic
+        return json.dumps({"summary":"No AI provider configured","comments":[]})
 
 
 # generare code PR

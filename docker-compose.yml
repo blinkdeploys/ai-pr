@@ -1,0 +1,38 @@
+services:
+  # ai pr webhook service
+  webhook:
+    build: ./webhook
+    container_name: ai_webhook
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AI_PROVIDER=${AI_PROVIDER:-none}
+      - SIMULATOR_CALLBACK_URL=http://simulator:9000/receive_comment
+    volumes:
+      - ./test-repo:/repos/test-repo:ro
+    depends_on:
+      - simulator
+
+  # git PR simulator for local testing
+  simulator:
+    build: ./simulator
+    container_name: pr_simulator
+    environment:
+      - WEBHOOK_URL=http://webhook:8000/webhook
+    volumes:
+      - ./test-repo:/repos/test-repo:ro
+    ports:
+      - "9000:9000"  # exposes endpoint to receive posted comments (simulates GitHub)
+
+  # service that runs ci tests
+  ci-runner:
+    image: python:3.11
+    container_name: ci-runner
+    working_dir: /repo
+    volumes:
+      - ./test-ai-pr-repo:/repo
+    command: ["pytest", "--maxfail=1", "--disable-warnings", "-q"]
+
+
+

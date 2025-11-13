@@ -18,8 +18,45 @@ def execution_time(start_time):
 
 
 # build reviewer prompt
-def build_prompt(repo_full, pr_number, branch_path, report):
-    pass
+def build_prompt(repo_full: str,
+                 pr_number: str,
+                 branch_path: str,
+                 report: str) -> str:
+    # Summarize top issues and ask for suggestions
+
+    # top issues
+    top = []
+
+    # check if security scanners like SAST, bankdit
+    if report.get("bandit"):
+        top.append("security findings: " + str(len(report["bandit"].get("results", []))))
+
+    # check if linters are used
+    if report.get("flake8"):
+        top.append("style issues (flake8): " + str(len(report["flake8"].get("files", {}))))
+
+    summary = "\\n".join(top) or "no automated findings"
+
+    # prompt template
+    prompt = f"""
+You are an expert senior engineer reviewing a pull request for repo {repo_full} PR #{pr_number}.
+Automated checks summary:
+{summary}
+
+Please produce:
+1) A short 3-sentence human readable summary of the PR health.
+2) A short list of suggested review comments (line-level when possible, otherwise file-level). Output JSON:
+{{
+ "summary": "...",
+ "comments": [
+   {{ "path":"path/to/file.py", "line": 123, "comment":"..."}},
+   ...
+ ]
+}}
+Only output valid JSON.
+"""
+    return prompt
+
 
 
 # run open ai prompt
@@ -39,7 +76,11 @@ def call_openai(prompt: str) -> str:
 
 
 # generare code PR
-def generate_review(repo_full, pr_number, branch, path, report):
+def generate_review(repo_full: str,
+                    pr_number: str,
+                    branch: str,
+                    path: str,
+                    report: str) -> Dict:
     # start time
     start_time = time.time()
     # fetch the prompt
